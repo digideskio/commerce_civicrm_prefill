@@ -1,0 +1,8 @@
+name = Commerce CiviCRM Prefill
+description = The address prefilling functionality from commerce_civicrm - so you can have that & not the rules
+core = 7.x
+dependencies[] = commerce_order
+dependencies[] = civicrm
+
+
+

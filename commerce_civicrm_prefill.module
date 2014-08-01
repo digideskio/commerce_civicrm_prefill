@@ -1,0 +1,86 @@
+<?php
+/**
+ * Prefill a commerce order form with address data from a CiviCRM Contact.
+ *
+ * @param $form
+ * @param $form_state
+ * @param $cid
+ *   CiviCRM contact id
+ */
+function _commerce_civicrm_prefill_order_form_with_civicrm_data(&$form, &$form_state, $cid) {
+  civicrm_initialize();
+
+  // Save the CiviCRM contact id onto the order.
+  $form_state['commerce_order']->data['cid'] = $cid;
+
+  // Get the CiviCRM Contact object.
+  $params = array('id' => $cid,);
+  try {
+    $contact = civicrm_api3('contact', 'getsingle', $params);
+  }
+  catch (Exception $e) {
+    return;
+  }
+
+  // Set the order primary mail to the contacts email
+  $form_state['commerce_order']->mail = $contact['email'];
+
+  // Get the shipping_profile and shipping_address so we can work with them easier.
+  $shipping_profile = $form['commerce_customer_shipping']['und']['profiles'][0];
+  $shipping_address = $shipping_profile['commerce_customer_address']['und'][0];
+  // TODO make email field configurable - relies on field being 'field_email' currently.
+  $shipping_profile['field_email']['und'][0]['email']['#default_value'] = $contact['email'];
+  // TODO make phone field configurable - relies on field being 'field_phone' currently.
+  $shipping_profile['field_phone']['und'][0]['phone']['#default_value'] = $contact['phone'];
+  $shipping_address['street_block']['thoroughfare']['#value'] = $contact['street_address'];
+  $shipping_address['street_block']['premise']['#value'] = $contact['supplemental_address_1'];
+  $shipping_address['locality_block']['postal_code']['#value'] = $contact['postal_code'];
+  $shipping_address['locality_block']['administrative_area']['#value'] = $contact['state_province_name'];
+  $shipping_address['locality_block']['locality']['#value'] = $contact['city'];
+  $shipping_address['name_block']['name_line']['#value'] = $contact['display_name'];
+  // Add shipping_profile and shipping_address back into the form.
+  $shipping_profile['commerce_customer_address']['und'][0] = $shipping_address;
+  $form['commerce_customer_shipping']['und']['profiles'][0] = $shipping_profile;
+
+  // Get the billing_profile and billing_address so we can work with them easier.
+  $billing_profile = $form['commerce_customer_billing']['und']['profiles'][0];
+  $billing_address = $billing_profile['commerce_customer_address']['und'][0];
+  // TODO make email field configurable - relies on field being 'field_email' currently.
+  $billing_profile['field_email']['und'][0]['email']['#default_value'] = $contact['email'];
+  // TODO make phone field configurable - relies on field being 'field_phone' currently.
+  $billing_profile['field_phone']['und'][0]['value']['#default_value'] = $contact['phone'];
+  $billing_address['street_block']['thoroughfare']['#value'] = $contact['street_address'];
+  $billing_address['street_block']['premise']['#value'] = $contact['supplemental_address_1'];
+  $billing_address['locality_block']['postal_code']['#value'] = $contact['postal_code'];
+  $billing_address['locality_block']['administrative_area']['#value'] = $contact['state_province_name'];
+  $billing_address['locality_block']['locality']['#value'] = $contact['city'];
+  $billing_address['name_block']['name_line']['#value'] = $contact['display_name'];
+  // Add billing_profile and billing_address back into the form.
+  $billing_profile['commerce_customer_address']['und'][0] = $billing_address;
+  $form['commerce_customer_billing']['und']['profiles'][0] = $billing_profile;
+}
+
+/**
+ * Implements of hook_form_FORMID_alter().
+ *
+ * @param $form
+ * @param $form_state
+ */
+function commerce_civicrm_prefill_form_commerce_order_ui_order_form_alter(&$form, &$form_state) {
+  dpm($form);
+  if (!isset($form_state['commerce_order']->order_id) && $_GET['cid'] && is_numeric($_GET['cid'])) {
+    _commerce_civicrm_prefill_order_form_with_civicrm_data($form, $form_state, $_GET['cid']);
+  }
+}
+
+/**
+ * Implements of hook_form_alter().
+ *
+ * @param $form
+ * @param $form_state
+ * @param $form_id
+ */
+function commerce_civicrm_prefill_form_alter(&$form, &$form_state, $form_id) {
+  dpm($form_id);
+  drupal_set_message('h');
+}
